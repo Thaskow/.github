@@ -112,6 +112,11 @@ def configure(run, entry):
     if changed:
         run.do(repo, f"options {', '.join(sorted(changed))}", lambda: api(f"repos/{repo}", "PATCH", changed))
 
+    if entry.get("release_please"):
+        run.do(repo, "Actions autorisées à ouvrir des PR (Release Please)", lambda: api(
+            f"repos/{repo}/actions/permissions/workflow", "PUT",
+            {"default_workflow_permissions": "read", "can_approve_pull_request_reviews": True}))
+
     days = d["artifact_retention_days"]
     run.do(repo, f"rétention des artefacts et logs : {days} jours",
            lambda: api(f"repos/{repo}/actions/permissions/artifact-and-log-retention", "PUT", {"days": days}, check=False))
