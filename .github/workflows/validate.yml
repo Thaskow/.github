@@ -1,0 +1,72 @@
+name: Validate
+
+on:
+  workflow_call:
+    inputs:
+      compose:
+        description: Vérifie docker-compose.yml avec docker compose config
+        type: boolean
+        default: true
+      compose-env:
+        description: Lignes KEY=valeur factices écrites dans .env pour la vérification compose
+        type: string
+        default: ''
+      run:
+        description: Commandes de validation propres au repo, lancées après pre-commit
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: pre-commit
+        run: |
+          if [ ! -f .pre-commit-config.yaml ]; then echo "Pas de .pre-commit-config.yaml"; exit 0; fi
+          pip install -q pre-commit
+          pre-commit run --all-files --show-diff-on-failure --color always
+
+      - name: docker compose config
+        if: inputs.compose && hashFiles('docker-compose.yml', 'compose.yml', 'compose.yaml') != ''
+        env:
+          COMPOSE_ENV: ${{ inputs.compose-env }}
+        run: |
+          if [ -n "$COMPOSE_ENV" ]; then printf '%s\n' "$COMPOSE_ENV" > .env; fi
+          docker compose config -q
+          docker compose config --format json | python3 -c '
+          import json, re, sys
+          bad = []
+          for name, s in json.load(sys.stdin)["services"].items():
+              image = s.get("image", "")
+              if "build" in s:
+                  continue
+              print(f"  {name}: {image}")
+              if not re.search(r"(:[^/]+$|@sha256:)", image) or image.endswith(":latest"):
+                  bad.append(f"{name} ({image})")
+          if bad:
+              sys.exit("::error::Image sans version figée : " + ", ".join(bad))
+          '
+
+      - name: Repo checks
+        if: inputs.run != ''
+        env:
+          RUN: ${{ inputs.run }}
+        run: bash -euo pipefail -c "$RUN"

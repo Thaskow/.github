@@ -1,0 +1,27 @@
+name: Bug
+description: Un comportement incorrect ou un service en panne
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Constat
+      description: Ce qui se passe, et ce qui devrait se passer.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      placeholder: "1. …\n2. …"
+  - type: input
+    id: version
+    attributes:
+      label: Version en production
+      description: Tag ou commit (résumé du dernier workflow Deploy).
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "Sans secret. Ex. : sudo docker compose logs --tail 100"
+      render: text

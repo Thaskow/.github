@@ -1,0 +1,37 @@
+name: ntfy
+description: Notification ntfy (titre UTF-8 encodé), ignorée si l'URL est vide
+
+inputs:
+  url:
+    description: URL du topic (secret NTFY_URL)
+    required: false
+    default: ''
+  title:
+    required: true
+  message:
+    required: true
+  tags:
+    required: false
+    default: ''
+  priority:
+    description: min, low, default, high, urgent
+    required: false
+    default: default
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        NTFY_URL: ${{ inputs.url }}
+        TITLE: ${{ inputs.title }}
+        MESSAGE: ${{ inputs.message }}
+        TAGS: ${{ inputs.tags }}
+        PRIORITY: ${{ inputs.priority }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        test -n "$NTFY_URL" || exit 0
+        # non-ASCII titles must be RFC 2047 encoded for ntfy
+        title="=?UTF-8?B?$(printf '%s' "$TITLE" | base64 -w0)?="
+        curl -fsS -m 10 -H "Title: $title" -H "Tags: $TAGS" -H "Priority: $PRIORITY" -H "Click: $RUN_URL" \
+          --data-binary "$MESSAGE" "$NTFY_URL" >/dev/null || true

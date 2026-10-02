@@ -1,0 +1,27 @@
+name: Changement d'infrastructure
+description: Nouveau service, montée de version d'image, changement de DNS, de port ou de secret
+labels: [infra]
+body:
+  - type: textarea
+    id: change
+    attributes:
+      label: Changement
+    validations:
+      required: true
+  - type: checkboxes
+    id: impacts
+    attributes:
+      label: Impacts à vérifier
+      options:
+        - label: "vps.json (service, chemins sauvegardés, ordre de déploiement)"
+        - label: "nginx.json et DNS"
+        - label: "Secrets / variables de l'environnement production"
+        - label: "Notes de version et migrations de l'image"
+        - label: "Sauvegarde et restauration des données"
+        - label: "Surveillance (Uptime Kuma, Beszel, GlitchTip)"
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback
+    validations:
+      required: true

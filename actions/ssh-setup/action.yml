@@ -1,0 +1,36 @@
+name: SSH setup
+description: Clé de déploiement et empreinte du serveur, sans jamais faire confiance au premier contact
+
+inputs:
+  private-key:
+    description: Clé privée (secret SSH_PRIVATE_KEY)
+    required: true
+  known-hosts:
+    description: Empreintes du serveur (secret SSH_KNOWN_HOSTS)
+    required: true
+  host:
+    description: Serveur (variable SERVER_HOST)
+    required: true
+  user:
+    description: Utilisateur SSH (variable SERVER_USER)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SSH_KEY: ${{ inputs.private-key }}
+        KNOWN_HOSTS: ${{ inputs.known-hosts }}
+        HOST: ${{ inputs.host }}
+        USER_NAME: ${{ inputs.user }}
+      run: |
+        for v in SSH_KEY KNOWN_HOSTS HOST USER_NAME; do
+          test -n "${!v}" || { echo "::error::Entrée $v vide : secrets/variables de l'environnement production manquants (python vps.py deploy)"; exit 1; }
+        done
+        install -m 700 -d ~/.ssh
+        printf '%s\n' "$SSH_KEY" | sed 's/\r$//' > ~/.ssh/deploy
+        chmod 600 ~/.ssh/deploy
+        printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+        printf 'Host *\n  IdentityFile ~/.ssh/deploy\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  ServerAliveInterval 30\n' > ~/.ssh/config
+        echo "SERVER=$USER_NAME@$HOST" >> "$GITHUB_ENV"

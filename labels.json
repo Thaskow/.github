@@ -1,0 +1,11 @@
+[
+  {"name": "bug", "color": "d73a4a", "description": "Comportement incorrect ou service en panne"},
+  {"name": "feature", "color": "a2eeef", "description": "Nouvelle fonctionnalité ou amélioration", "aliases": ["enhancement"]},
+  {"name": "security", "color": "b60205", "description": "Vulnérabilité, secret exposé, durcissement"},
+  {"name": "infra", "color": "5319e7", "description": "Serveur, Docker, réseau, DNS, sauvegardes"},
+  {"name": "dependencies", "color": "0366d6", "description": "Mise à jour de dépendance ou d'image"},
+  {"name": "breaking-change", "color": "e11d21", "description": "Change un comportement ou demande une migration"},
+  {"name": "documentation", "color": "0075ca", "description": "README, ADR, architecture"},
+  {"name": "ci", "color": "1d76db", "description": "GitHub Actions, validation, déploiement"},
+  {"name": "maintenance", "color": "fbca04", "description": "Nettoyage, refactoring, dette technique"}
+]

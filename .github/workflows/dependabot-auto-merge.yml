@@ -1,0 +1,32 @@
+name: Dependabot auto-merge
+
+# Patches only, never Docker images: those go through manual review (release notes, migrations).
+on:
+  workflow_call:
+    inputs:
+      ecosystems:
+        description: Écosystèmes dont les patchs sont fusionnés automatiquement une fois la CI verte
+        type: string
+        default: 'github_actions pip npm_and_yarn pre_commit'
+
+permissions:
+  contents: read
+
+jobs:
+  auto-merge:
+    name: auto-merge
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Enable auto-merge
+        if: steps.meta.outputs.update-type == 'version-update:semver-patch' && contains(format(' {0} ', inputs.ecosystems), format(' {0} ', steps.meta.outputs.package-ecosystem))
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR"

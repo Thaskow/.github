@@ -1,0 +1,243 @@
+name: Deploy (docker compose)
+
+# Called with `secrets: inherit`; SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS, NTFY_URL and the
+# SERVER_HOST / SERVER_USER / DEPLOY_PATH variables come from the caller's `production` environment.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Commit, tag ou branche à déployer (défaut : le commit qui a déclenché le workflow)'
+        type: string
+        default: ''
+      pre-deploy:
+        description: Commandes lancées sur le serveur dans DEPLOY_PATH avant docker compose up (génération, validation)
+        type: string
+        default: ''
+      post-deploy:
+        description: Commandes lancées sur le serveur après un déploiement réussi
+        type: string
+        default: ''
+      env-file:
+        description: Modèle du .env écrit sur le serveur ; ${NOM} = secret ou variable obligatoire, ${NOM:-défaut} = facultatif
+        type: string
+        default: ''
+      build:
+        description: docker compose up --build (images construites sur le serveur)
+        type: boolean
+        default: false
+      force-recreate:
+        description: docker compose up --force-recreate
+        type: boolean
+        default: false
+      wait-timeout:
+        description: Secondes accordées aux conteneurs pour devenir sains
+        type: number
+        default: 180
+      health-url:
+        description: URL publique qui doit répondre 2xx/3xx après le déploiement, sinon retour à la version précédente
+        type: string
+        default: ''
+      health-expect:
+        description: Texte attendu dans la réponse de health-url
+        type: string
+        default: ''
+      environment-url:
+        description: URL affichée sur l'environnement GitHub
+        type: string
+        default: ''
+    outputs:
+      version:
+        description: Version déployée (git describe)
+        value: ${{ jobs.deploy.outputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ inputs.environment-url }}
+    concurrency:
+      group: deploy-${{ github.repository }}
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.deploy.outputs.version }}
+    env:
+      SERVER_HOST: ${{ vars.SERVER_HOST }}
+      SERVER_USER: ${{ vars.SERVER_USER }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+      REF: ${{ inputs.ref || github.sha }}
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          for v in SERVER_HOST SERVER_USER DEPLOY_PATH SSH_KEY KNOWN_HOSTS; do
+            test -n "${!v}" || { echo "::error::$v absent de l'environnement production (python vps.py deploy le pose)"; exit 1; }
+          done
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" | sed 's/\r$//' > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host *\n  IdentityFile ~/.ssh/deploy\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  ServerAliveInterval 30\n' > ~/.ssh/config
+          echo "SERVER=$SERVER_USER@$SERVER_HOST" >> "$GITHUB_ENV"
+
+      - name: Render .env
+        if: inputs.env-file != ''
+        env:
+          TEMPLATE: ${{ inputs.env-file }}
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: |
+          umask 077
+          python3 - <<'EOF'
+          import json, os, re, sys
+          values = {**json.loads(os.environ["VARS_JSON"] or "{}"), **json.loads(os.environ["SECRETS_JSON"] or "{}")}
+          missing = []
+          def sub(m):
+              name, default = m.group(1), m.group(3)
+              if values.get(name):
+                  return values[name]
+              if default is None:
+                  missing.append(name)
+              return default or ""
+          out = re.sub(r"\$\{([A-Z0-9_]+)(:-([^}]*))?\}", sub, os.environ["TEMPLATE"])
+          if missing:
+              sys.exit(f"::error::Secrets ou variables manquants : {', '.join(sorted(set(missing)))}")
+          open("deploy.env", "w").write(out.strip() + "\n")
+          EOF
+          scp -q deploy.env "$SERVER:/tmp/deploy-${{ github.run_id }}.env"
+          rm deploy.env
+
+      - name: Prepare server script
+        env:
+          PRE_DEPLOY: ${{ inputs.pre-deploy }}
+          POST_DEPLOY: ${{ inputs.post-deploy }}
+        run: |
+          {
+            echo 'set -eu'
+            printf 'PRE_DEPLOY=%q\n' "$PRE_DEPLOY"
+            printf 'POST_DEPLOY=%q\n' "$POST_DEPLOY"
+            cat <<'EOF'
+          cd "$DEPLOY_PATH" 2>/dev/null && [ -d .git ] || { echo "::error::$DEPLOY_PATH n'est pas un clone git sur le serveur (python vps.py deploy le crée)"; exit 1; }
+
+          # called from `if ! up`, where set -e is off: every step returns explicitly
+          up() {
+            if [ -n "$PRE_DEPLOY" ]; then bash -euo pipefail -c "$PRE_DEPLOY" || return 1; fi
+            sudo docker compose config -q || return 1
+            if [ "$BUILD" != true ]; then sudo docker compose pull -q --ignore-buildable || return 1; fi
+            set -- --remove-orphans --wait --wait-timeout "$WAIT_TIMEOUT"
+            if [ "$BUILD" = true ]; then set -- "$@" --build; fi
+            if [ "$RECREATE" = true ]; then set -- "$@" --force-recreate; fi
+            sudo docker compose up -d "$@" || return 1
+            sleep 5
+            bad=$(sudo docker compose ps -a --format '{{.Name}} {{.State}} {{.Health}}' | awk '$2 != "running" || ($3 != "" && $3 != "healthy")')
+            if [ -n "$bad" ]; then echo "Conteneurs en échec : $bad"; return 1; fi
+          }
+
+          checkout() {
+            git reset -q --hard "$1"
+            # no -x: ignored files (.env, data/, backups/) are kept
+            git clean -fdq
+          }
+
+          case "$MODE" in
+            deploy)
+              prev=$(git rev-parse HEAD)
+              echo "previous=$prev"
+              git fetch -q --force --tags origin
+              commit=$(git rev-parse -q --verify "origin/$REF^{commit}" || git rev-parse --verify "$REF^{commit}")
+              checkout "$commit"
+              if [ -f "/tmp/deploy-$RUN_ID.env" ]; then mv "/tmp/deploy-$RUN_ID.env" .env && chmod 600 .env; fi
+              if ! up; then
+                echo "::error::Échec de $(git describe --tags --always) : retour à $(git rev-parse --short "$prev")"
+                checkout "$prev"
+                up || echo "::error::Le retour à la version précédente a aussi échoué"
+                echo "rolled_back=true"
+                exit 1
+              fi
+              if [ -n "$POST_DEPLOY" ]; then bash -euo pipefail -c "$POST_DEPLOY"; fi
+              ;;
+            rollback)
+              checkout "$TARGET"
+              up
+              echo "rolled_back=true"
+              ;;
+          esac
+          sudo docker image prune -f >/dev/null
+          echo "version=$(git describe --tags --always)"
+          EOF
+          } > server.sh
+
+      - name: Deploy
+        id: deploy
+        env:
+          BUILD: ${{ inputs.build }}
+          RECREATE: ${{ inputs.force-recreate }}
+          WAIT_TIMEOUT: ${{ inputs.wait-timeout }}
+        run: |
+          set +e
+          ssh "$SERVER" "MODE=deploy DEPLOY_PATH='$DEPLOY_PATH' REF='$REF' RUN_ID='${{ github.run_id }}' BUILD='$BUILD' RECREATE='$RECREATE' WAIT_TIMEOUT='$WAIT_TIMEOUT' bash -s" < server.sh 2>&1 | tee deploy.log
+          rc=${PIPESTATUS[0]}
+          grep -E '^(version|previous|rolled_back)=' deploy.log >> "$GITHUB_OUTPUT"
+          exit "$rc"
+
+      - name: Health check
+        id: health
+        if: inputs.health-url != ''
+        env:
+          URL: ${{ inputs.health-url }}
+          EXPECT: ${{ inputs.health-expect }}
+        run: |
+          for _ in $(seq 1 12); do
+            if body=$(curl -fsSL -m 10 -A "deploy-check/${{ github.repository }}" "$URL") && { [ -z "$EXPECT" ] || printf '%s' "$body" | grep -qF -- "$EXPECT"; }; then
+              echo "$URL répond"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::$URL ne répond pas correctement après le déploiement"
+          exit 1
+
+      - name: Roll back
+        id: rollback
+        if: failure() && steps.health.outcome == 'failure' && steps.deploy.outputs.previous != ''
+        env:
+          BUILD: ${{ inputs.build }}
+          RECREATE: ${{ inputs.force-recreate }}
+          WAIT_TIMEOUT: ${{ inputs.wait-timeout }}
+          TARGET: ${{ steps.deploy.outputs.previous }}
+        run: ssh "$SERVER" "MODE=rollback DEPLOY_PATH='$DEPLOY_PATH' TARGET='$TARGET' BUILD='$BUILD' RECREATE='$RECREATE' WAIT_TIMEOUT='$WAIT_TIMEOUT' bash -s" < server.sh
+
+      - name: Summary and notification
+        if: always()
+        env:
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          STATUS: ${{ job.status }}
+          ROLLED_BACK: ${{ steps.deploy.outputs.rolled_back == 'true' || steps.rollback.outcome == 'success' }}
+          VERSION: ${{ steps.deploy.outputs.version }}
+          REPO: ${{ github.event.repository.name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "### $REPO"
+            echo "- Demandé : \`$REF\`"
+            echo "- Résultat : $STATUS${VERSION:+, \`$VERSION\` en production}"
+            if [ "$ROLLED_BACK" = true ]; then echo "- **Retour automatique à la version précédente**"; fi
+            echo "- Rollback manuel : *Run workflow* avec \`ref\` = tag ou commit voulu"
+          } >> "$GITHUB_STEP_SUMMARY"
+          test -n "$NTFY_URL" || exit 0
+          title() { printf '=?UTF-8?B?%s?=' "$(printf '%s' "$1" | base64 -w0)"; }
+          if [ "$STATUS" = success ]; then
+            set -- "$REPO : $VERSION déployé" "rocket" "low" "Déploiement réussi."
+          elif [ "$ROLLED_BACK" = true ]; then
+            set -- "$REPO : déploiement annulé" "rewind,warning" "high" "Le déploiement de ${REF::12} a échoué, la version précédente a été remise."
+          else
+            set -- "$REPO : échec du déploiement" "x" "high" "Le déploiement de ${REF::12} a échoué. Voir les logs."
+          fi
+          curl -fsS -m 10 -H "Title: $(title "$1")" -H "Tags: $2" -H "Priority: $3" -H "Click: $RUN_URL" --data-binary "$4" "$NTFY_URL" >/dev/null || true

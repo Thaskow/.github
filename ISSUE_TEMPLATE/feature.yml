@@ -1,0 +1,19 @@
+name: Fonctionnalité
+description: Une nouvelle possibilité ou une amélioration
+labels: [feature]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Besoin
+      description: Le problème à résoudre, avant la solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposition
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives envisagées
