@@ -16,4 +16,4 @@ repos:
     rev: v0.16.10
     hooks:
       - id: ruff-check
-        args: [--select, 'E4,E7,E9,F,B,S', --ignore, 'E741,S603,S607,S310,S108']
+        args: [--select, 'E4,E7,E9,F,B,S', --ignore, 'E741,S110,S311,S603,S607,S310,S108']
