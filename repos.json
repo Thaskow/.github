@@ -1,0 +1,35 @@
+{
+  "defaults": {
+    "squash_only": true,
+    "delete_branch_on_merge": true,
+    "auto_merge": true,
+    "vulnerability_alerts": true,
+    "labels": true,
+    "artifact_retention_days": 30
+  },
+  "repos": [
+    {"name": "Thaskow/.github", "role": "conventions", "ruleset": true},
+    {"name": "Thaskow/vps", "rename_from": "VPS", "role": "provisioning", "ruleset": true},
+    {"name": "Thaskow/nginx-reverse", "rename_from": "NGINX-Reverse", "role": "service", "ruleset": true},
+    {"name": "Thaskow/observability", "rename_from": "Observabilite", "role": "service", "ruleset": true},
+    {"name": "Thaskow/uptime-kuma", "rename_from": "Uptime-Kuma", "role": "service", "ruleset": true},
+    {"name": "Thaskow/beszel", "rename_from": "Beszel", "role": "service", "ruleset": true},
+    {"name": "Thaskow/ntfy", "rename_from": "Ntfy", "role": "service", "ruleset": true},
+    {"name": "Thaskow/reddit", "rename_from": "Reddit", "role": "application", "ruleset": true},
+    {"name": "Thaskow/thaskow", "role": "profile"},
+    {"name": "Thaskow/navi", "rename_from": "Navi", "role": "dormant"},
+    {"name": "Thaskow/manga-world", "rename_from": "Manga-World", "role": "dormant"},
+    {"name": "Thaskow/memovision", "rename_from": "MemoVision", "role": "dormant"},
+    {"name": "Thaskow/cooker-chief", "rename_from": "Cooker-Chief", "role": "dormant"},
+    {"name": "Thaskow/my-portfolio", "role": "dormant"},
+    {"name": "Thaskow/lobots", "role": "dormant", "default_branch_from": "master"},
+    {"name": "Thaskow/ppe-laravel", "rename_from": "PPE-Laravel", "role": "dormant", "default_branch_from": "master"},
+    {"name": "CStonx/site", "role": "application", "external": true},
+    {"name": "CStonx/discord", "role": "application", "external": true},
+    {"name": "CStonx/app", "role": "application", "external": true}
+  ],
+  "ruleset": {
+    "name": "main",
+    "required_check": "validate / validate"
+  }
+}

@@ -93,4 +93,23 @@ pip install pre-commit && pre-commit install
 python scripts/sync-labels.py Thaskow/<repo>   # aligne les labels d'un repo
 ```
 
+## Réglages GitHub déclarés
+
+[`repos.json`](repos.json) liste les repos et leur rôle ; [`scripts/apply-settings.py`](scripts/apply-settings.py) les rend conformes (idempotent, simulation par défaut) :
+
+```sh
+python scripts/apply-settings.py            # affiche ce qui changerait
+python scripts/apply-settings.py --apply    # applique
+python scripts/apply-settings.py --apply --only Thaskow/ntfy
+```
+
+- renommages en kebab-case (GitHub redirige les anciennes URL) et branche par défaut `master` → `main` ;
+- fusion **squash uniquement** (titre de la PR = commit), branche supprimée après fusion, auto-merge autorisé, wiki désactivé ;
+- alertes et correctifs de sécurité Dependabot ; secret scanning + push protection sur les repos publics ;
+- rétention des artefacts et logs : 30 jours (les sauvegardes fixent la leur) ;
+- labels de [`labels.json`](labels.json) ;
+- **ruleset `main`** sur les repos actifs : PR obligatoire (sans review imposée), check `validate / validate`, conversations résolues, ni suppression ni force push ; l'administrateur peut fusionner une PR sans attendre les checks (Release PR, urgence), jamais pousser directement.
+
+Les repos de l'organisation `CStonx` (privés, offre gratuite) ne peuvent pas avoir de ruleset : seules les alertes de sécurité leur sont appliquées. Les environnements `production` et leurs secrets sont posés par `python vps.py deploy` (repo `vps`).
+
 La CI valide les workflows avec `actionlint`.
