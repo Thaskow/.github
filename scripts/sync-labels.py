@@ -1,4 +1,3 @@
-"""Aligne les labels des repos sur labels.json : python scripts/sync-labels.py Thaskow/vps Thaskow/ntfy …"""
 import json
 import subprocess
 import sys
@@ -6,7 +5,10 @@ from pathlib import Path
 from urllib.parse import quote
 
 LABELS = json.loads((Path(__file__).resolve().parent.parent / "labels.json").read_text(encoding="utf-8"))
-OBSOLETE = {"duplicate", "good first issue", "help wanted", "invalid", "question", "wontfix", "github_actions", "docker", "python", "javascript"}
+for stream in (sys.stdout, sys.stderr):
+    stream.reconfigure(encoding="utf-8", errors="replace")
+
+OBSOLETE = {"accessibility", "duplicate", "good first issue", "help wanted", "invalid", "question", "wontfix", "github_actions", "docker", "python", "javascript"}
 
 
 def gh(*args, check=True):
