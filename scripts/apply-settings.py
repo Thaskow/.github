@@ -132,12 +132,13 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--apply", action="store_true")
     p.add_argument("--only", nargs="+", metavar="REPO")
+    p.add_argument("--skip-rename", action="store_true")
     args = p.parse_args()
     run = Run(args.apply)
     entries = [e for e in CONFIG["repos"] if not args.only or e["name"] in args.only]
     for entry in entries:
-        if not entry.get("external") and not rename(run, entry):
-            continue
+        if not entry.get("external") and not args.skip_rename:
+            rename(run, entry)
     for entry in entries:
         configure(run, entry)
     if not args.apply:
