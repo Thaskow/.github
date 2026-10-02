@@ -11,6 +11,8 @@
     {"name": "Thaskow/.github", "role": "conventions", "ruleset": true, "release_please": true},
     {"name": "Thaskow/vps", "rename_from": "VPS", "role": "provisioning", "ruleset": true},
     {"name": "Thaskow/nginx-reverse", "rename_from": "NGINX-Reverse", "role": "service", "ruleset": true},
+    {"name": "Thaskow/authelia", "role": "service", "ruleset": true},
+    {"name": "Thaskow/homarr", "role": "service", "ruleset": true},
     {"name": "Thaskow/observability", "rename_from": "Observabilite", "role": "service", "ruleset": true},
     {"name": "Thaskow/uptime-kuma", "rename_from": "Uptime-Kuma", "role": "service", "ruleset": true},
     {"name": "Thaskow/beszel", "rename_from": "Beszel", "role": "service", "ruleset": true},
