@@ -78,7 +78,7 @@ Rollback manuel : **Actions → Deploy → Run workflow**, `ref` = tag (`v1.4.3`
 | Type de repo | Release Please | Déploiement |
 | --- | --- | --- |
 | Application ou outil (`reddit`, `cstonx/*`, ce repo) | oui | `main`, version visible dans le résumé du déploiement |
-| Config déclarative d'un service tiers (`ntfy`, `uptime-kuma`, `beszel`, `observability`, `nginx-reverse`) | non : la version est celle de l'image | `main` |
+| Config déclarative d'un service tiers (`ntfy`, `uptime-kuma`, `beszel`, `observability`, `nginx-reverse`, `authelia`, `homarr`) | non : la version est celle de l'image | `main` |
 | Provisioning (`vps`) | non | manuel (`python vps.py deploy`) |
 
 - SemVer, tags `vX.Y.Z` créés par la Release PR, **jamais déplacés ni recréés** : une correction = une nouvelle version.
