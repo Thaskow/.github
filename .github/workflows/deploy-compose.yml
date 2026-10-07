@@ -87,17 +87,70 @@ jobs:
           printf 'Host *\n  IdentityFile ~/.ssh/deploy\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  ServerAliveInterval 30\n' > ~/.ssh/config
           echo "SERVER=$SERVER_USER@$SERVER_HOST" >> "$GITHUB_ENV"
 
+      # Secrets cannot be filtered inside a step: the names the template asks for are extracted
+      # first (no secret in this step), then only those are read, through fixed slots padded with "_".
+      - name: List .env names
+        id: env-names
+        if: inputs.env-file != ''
+        env:
+          TEMPLATE: ${{ inputs.env-file }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, re, sys
+          names = sorted(set(re.findall(r"\$\{([A-Z0-9_]+)(?::-[^}]*)?\}", os.environ["TEMPLATE"])))
+          if len(names) > 32:
+              sys.exit(f"::error::env-file référence {len(names)} noms, maximum 32")
+          names += ["_"] * (32 - len(names))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"names={json.dumps(names)}\n")
+          EOF
+
       - name: Render .env
         if: inputs.env-file != ''
         env:
           TEMPLATE: ${{ inputs.env-file }}
-          SECRETS_JSON: ${{ toJSON(secrets) }}
+          NAMES: ${{ steps.env-names.outputs.names }}
           VARS_JSON: ${{ toJSON(vars) }}
+          S00: ${{ secrets[fromJSON(steps.env-names.outputs.names)[0]] }}
+          S01: ${{ secrets[fromJSON(steps.env-names.outputs.names)[1]] }}
+          S02: ${{ secrets[fromJSON(steps.env-names.outputs.names)[2]] }}
+          S03: ${{ secrets[fromJSON(steps.env-names.outputs.names)[3]] }}
+          S04: ${{ secrets[fromJSON(steps.env-names.outputs.names)[4]] }}
+          S05: ${{ secrets[fromJSON(steps.env-names.outputs.names)[5]] }}
+          S06: ${{ secrets[fromJSON(steps.env-names.outputs.names)[6]] }}
+          S07: ${{ secrets[fromJSON(steps.env-names.outputs.names)[7]] }}
+          S08: ${{ secrets[fromJSON(steps.env-names.outputs.names)[8]] }}
+          S09: ${{ secrets[fromJSON(steps.env-names.outputs.names)[9]] }}
+          S10: ${{ secrets[fromJSON(steps.env-names.outputs.names)[10]] }}
+          S11: ${{ secrets[fromJSON(steps.env-names.outputs.names)[11]] }}
+          S12: ${{ secrets[fromJSON(steps.env-names.outputs.names)[12]] }}
+          S13: ${{ secrets[fromJSON(steps.env-names.outputs.names)[13]] }}
+          S14: ${{ secrets[fromJSON(steps.env-names.outputs.names)[14]] }}
+          S15: ${{ secrets[fromJSON(steps.env-names.outputs.names)[15]] }}
+          S16: ${{ secrets[fromJSON(steps.env-names.outputs.names)[16]] }}
+          S17: ${{ secrets[fromJSON(steps.env-names.outputs.names)[17]] }}
+          S18: ${{ secrets[fromJSON(steps.env-names.outputs.names)[18]] }}
+          S19: ${{ secrets[fromJSON(steps.env-names.outputs.names)[19]] }}
+          S20: ${{ secrets[fromJSON(steps.env-names.outputs.names)[20]] }}
+          S21: ${{ secrets[fromJSON(steps.env-names.outputs.names)[21]] }}
+          S22: ${{ secrets[fromJSON(steps.env-names.outputs.names)[22]] }}
+          S23: ${{ secrets[fromJSON(steps.env-names.outputs.names)[23]] }}
+          S24: ${{ secrets[fromJSON(steps.env-names.outputs.names)[24]] }}
+          S25: ${{ secrets[fromJSON(steps.env-names.outputs.names)[25]] }}
+          S26: ${{ secrets[fromJSON(steps.env-names.outputs.names)[26]] }}
+          S27: ${{ secrets[fromJSON(steps.env-names.outputs.names)[27]] }}
+          S28: ${{ secrets[fromJSON(steps.env-names.outputs.names)[28]] }}
+          S29: ${{ secrets[fromJSON(steps.env-names.outputs.names)[29]] }}
+          S30: ${{ secrets[fromJSON(steps.env-names.outputs.names)[30]] }}
+          S31: ${{ secrets[fromJSON(steps.env-names.outputs.names)[31]] }}
         run: |
           umask 077
           python3 - <<'EOF'
           import json, os, re, sys
-          values = {**json.loads(os.environ["VARS_JSON"] or "{}"), **json.loads(os.environ["SECRETS_JSON"] or "{}")}
+          values = json.loads(os.environ["VARS_JSON"] or "{}")
+          for i, name in enumerate(json.loads(os.environ["NAMES"])):
+              if name != "_" and os.environ.get(f"S{i:02d}"):
+                  values[name] = os.environ[f"S{i:02d}"]
           missing = []
           def sub(m):
               name, default = m.group(1), m.group(3)

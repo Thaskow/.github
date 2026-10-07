@@ -5,7 +5,8 @@
     "auto_merge": true,
     "vulnerability_alerts": true,
     "labels": true,
-    "artifact_retention_days": 30
+    "artifact_retention_days": 30,
+    "sha_pinning_required": true
   },
   "repos": [
     {"name": "Thaskow/.github", "role": "conventions", "ruleset": true, "release_please": true},

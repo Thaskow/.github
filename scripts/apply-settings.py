@@ -112,10 +112,22 @@ def configure(run, entry):
     if changed:
         run.do(repo, f"options {', '.join(sorted(changed))}", lambda: api(f"repos/{repo}", "PATCH", changed))
 
-    if entry.get("release_please"):
-        run.do(repo, "Actions autorisées à ouvrir des PR (Release Please)", lambda: api(
-            f"repos/{repo}/actions/permissions/workflow", "PUT",
-            {"default_workflow_permissions": "read", "can_approve_pull_request_reviews": True}))
+    # Release Please opens its PR with GITHUB_TOKEN, which needs this switch; everywhere else it stays off
+    can_approve = bool(entry.get("release_please"))
+    workflow_perms = api(f"repos/{repo}/actions/permissions/workflow", check=False)
+    if workflow_perms.get("can_approve_pull_request_reviews") != can_approve or workflow_perms.get("default_workflow_permissions") != "read":
+        run.do(repo, f"Actions : permissions en lecture, approbation/création de PR {'autorisée (Release Please)' if can_approve else 'interdite'}",
+               lambda: api(f"repos/{repo}/actions/permissions/workflow", "PUT",
+                           {"default_workflow_permissions": "read", "can_approve_pull_request_reviews": can_approve}))
+
+    if d.get("sha_pinning_required") and not dormant and entry.get("sha_pinning_required", True):
+        perms = api(f"repos/{repo}/actions/permissions", check=False)
+        if perms and not perms.get("sha_pinning_required"):
+            body = {"enabled": perms.get("enabled", True), "sha_pinning_required": True}
+            if perms.get("allowed_actions"):
+                body["allowed_actions"] = perms["allowed_actions"]
+            run.do(repo, "Actions : épinglage par SHA obligatoire",
+                   lambda: api(f"repos/{repo}/actions/permissions", "PUT", body))
 
     days = d["artifact_retention_days"]
     run.do(repo, f"rétention des artefacts et logs : {days} jours",
