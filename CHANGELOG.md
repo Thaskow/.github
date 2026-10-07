@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/Thaskow/.github/compare/v1.1.0...v1.1.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **security:** moindre privilège pour les secrets du rendu .env et réglages Actions ([#5](https://github.com/Thaskow/.github/issues/5)) ([df9d723](https://github.com/Thaskow/.github/commit/df9d723d540d14ba0f7c74f3c016a9707facc5f6))
+
 ## [1.1.0](https://github.com/Thaskow/.github/compare/v1.0.0...v1.1.0) (2026-10-02)
 
 
