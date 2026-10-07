@@ -46,7 +46,7 @@ jobs:
 | `ref` | commit déclencheur | commit, tag ou branche à déployer |
 | `pre-deploy` | — | commandes serveur avant `up` (ex. `python3 nginx-conf.py` puis `nginx -t`) |
 | `post-deploy` | — | commandes serveur après un déploiement réussi (ex. timer systemd) |
-| `env-file` | — | modèle du `.env` : `${SECRET}` obligatoire, `${VAR:-défaut}` facultatif |
+| `env-file` | — | modèle du `.env` : `${SECRET}` obligatoire, `${VAR:-défaut}` facultatif (32 noms distincts au plus ; seuls les secrets cités sont lus) |
 | `build` | `false` | `up --build` pour les images construites sur le serveur |
 | `force-recreate` | `false` | `up --force-recreate` |
 | `wait-timeout` | `180` | délai pour que les conteneurs soient sains |
@@ -106,6 +106,8 @@ python scripts/apply-settings.py --apply --only Thaskow/ntfy
 - renommages en kebab-case (GitHub redirige les anciennes URL) et branche par défaut `master` → `main` ;
 - fusion **squash uniquement** (titre de la PR = commit), branche supprimée après fusion, auto-merge autorisé, wiki désactivé ;
 - alertes et correctifs de sécurité Dependabot ; secret scanning + push protection sur les repos publics ;
+- permissions Actions : `GITHUB_TOKEN` en lecture, création/approbation de PR par Actions **interdite** sauf `release_please: true` (Release Please ouvre sa PR avec `GITHUB_TOKEN`) ;
+- épinglage des actions par SHA obligatoire (`sha_pinning_required`) sur les repos actifs, désactivable par repo avec `"sha_pinning_required": false` ;
 - rétention des artefacts et logs : 30 jours (les sauvegardes fixent la leur) ;
 - labels de [`labels.json`](labels.json) ;
 - **ruleset `main`** sur les repos actifs : PR obligatoire (sans review imposée), check `validate / validate`, conversations résolues, ni suppression ni force push ; l'administrateur peut fusionner une PR sans attendre les checks (Release PR, urgence), jamais pousser directement.
