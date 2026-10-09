@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/Thaskow/.github/compare/v1.1.1...v1.2.0) (2026-10-09)
+
+
+### Features
+
+* **ai:** configuration commune des agents de code ([#7](https://github.com/Thaskow/.github/issues/7)) ([055fcd1](https://github.com/Thaskow/.github/commit/055fcd1babb54aa22a5a7504649daa4b7fe10743))
+
 ## [1.1.1](https://github.com/Thaskow/.github/compare/v1.1.0...v1.1.1) (2026-10-07)
 
 
