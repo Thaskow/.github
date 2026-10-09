@@ -8,6 +8,7 @@ Conventions, workflows réutilisables et modèles communs aux repos de [Thaskow]
 - **Modèles par défaut** pour les repos qui n'ont pas les leurs : [PR](PULL_REQUEST_TEMPLATE.md), [issues](ISSUE_TEMPLATE/) (bug, fonctionnalité, changement d'infra), [CONTRIBUTING](CONTRIBUTING.md), [SECURITY](SECURITY.md).
 - **Workflows réutilisables** et actions composites, appelés par les repos de services.
 - **Labels** communs : [labels.json](labels.json).
+- **Agents de code** (Claude Code, Codex) : instructions globales, sous-agents, outils et mesures de coût, voir [docs/ai.md](docs/ai.md).
 
 L'architecture du serveur et les ADR sont dans le repo privé `Thaskow/vps` (`docs/`), source de vérité de l'infrastructure. Ce repo est public pour que les modèles s'appliquent et que les repos de l'organisation `CStonx` puissent l'appeler : il ne contient ni secret, ni adresse, ni chemin du serveur.
 
