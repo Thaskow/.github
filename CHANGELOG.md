@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/Thaskow/.github/compare/v1.2.0...v1.2.1) (2026-10-22)
+
+
+### Bug Fixes
+
+* **deploy-compose:** ne pas échouer quand env-file est absent ([#9](https://github.com/Thaskow/.github/issues/9)) ([10f2286](https://github.com/Thaskow/.github/commit/10f2286f109ca60006082264d1dcad15023cbdcf))
+
 ## [1.2.0](https://github.com/Thaskow/.github/compare/v1.1.1...v1.2.0) (2026-10-09)
 
 
