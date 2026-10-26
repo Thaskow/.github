@@ -19,6 +19,7 @@
     {"name": "Thaskow/beszel", "rename_from": "Beszel", "role": "service", "ruleset": true},
     {"name": "Thaskow/ntfy", "rename_from": "Ntfy", "role": "service", "ruleset": true},
     {"name": "Thaskow/reddit", "rename_from": "Reddit", "role": "application", "ruleset": true, "release_please": true},
+    {"name": "Thaskow/clipforge", "role": "application", "ruleset": true},
     {"name": "Thaskow/thaskow", "role": "profile"},
     {"name": "Thaskow/navi", "rename_from": "Navi", "role": "dormant"},
     {"name": "Thaskow/manga-world", "rename_from": "Manga-World", "role": "dormant"},
