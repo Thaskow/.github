@@ -54,9 +54,9 @@ jobs:
 | `health-url`, `health-expect` | — | URL publique vérifiée après le déploiement (et texte attendu) |
 | `environment-url` | — | lien affiché sur l'environnement |
 
-Attendu dans l'environnement `production` de l'appelant : variables `SERVER_HOST`, `SERVER_USER`, `DEPLOY_PATH` ; secrets `SSH_PRIVATE_KEY`, `SSH_KNOWN_HOSTS`, `NTFY_URL` (facultatif). `python vps.py deploy` les pose.
+Attendu dans l'environnement `production` de l'appelant : variables `SERVER_HOST`, `SERVER_USER`, `DEPLOY_PATH` ; secrets `SSH_PRIVATE_KEY`, `SSH_KNOWN_HOSTS`, `PUSHOVER_TOKEN` et `PUSHOVER_USER` (facultatifs), `NTFY_URL` (facultatif, utilisé seulement sans Pushover). `python vps.py deploy` les pose.
 
-Déroulé : `git reset --hard` sur le commit voulu (les fichiers ignorés sont conservés), `pre-deploy`, `docker compose config`, `pull`, `up -d --wait`, contrôle que tous les conteneurs sont `running`/`healthy`, `health-url`. En cas d'échec, **retour automatique au commit précédent**. Notification ntfy : succès (priorité basse), échec ou retour arrière (priorité haute). La version déployée (`git describe`) est dans le résumé du job.
+Déroulé : `git reset --hard` sur le commit voulu (les fichiers ignorés sont conservés), `pre-deploy`, `docker compose config`, `pull`, `up -d --wait`, contrôle que tous les conteneurs sont `running`/`healthy`, `health-url`. En cas d'échec, **retour automatique au commit précédent**. Notification Pushover (ntfy sans Pushover) : succès (priorité basse), échec ou retour arrière (priorité haute). La version déployée (`git describe`) est dans le résumé du job.
 
 ### `validate.yml`
 
@@ -69,7 +69,8 @@ Active la fusion automatique des PR Dependabot de **patch** pour les écosystèm
 ## Actions composites
 
 - `actions/ssh-setup` : clé et empreintes du serveur, refuse de continuer si un secret manque.
-- `actions/ntfy` : notification avec titre UTF-8, ignorée sans URL.
+- `actions/notify` : notification Pushover, ou ntfy si Pushover n'est pas configuré, ignorée sans destination.
+- `actions/ntfy` : ancienne action, gardée tant que des workflows l'épinglent.
 
 ```yaml
 - uses: Thaskow/.github/actions/ssh-setup@<sha> # v1.0.0

@@ -46,7 +46,8 @@ Ce qui est sensible va dans les **secrets**, le reste dans les **variables**. To
 | `DEPLOY_PATH` | variable | dossier du service sur le serveur |
 | `SSH_PRIVATE_KEY` | secret | clé de déploiement (tournée à chaque `python vps.py deploy`) |
 | `SSH_KNOWN_HOSTS` | secret | empreintes du serveur ; jamais de `ssh-keyscan` en CI |
-| `NTFY_URL` | secret | topic ntfy des notifications (facultatif) |
+| `PUSHOVER_TOKEN`, `PUSHOVER_USER` | secret | jeton de l'app Pushover du repo et clé utilisateur (facultatifs) |
+| `NTFY_URL` | secret | topic ntfy, utilisé seulement sans Pushover (facultatif) |
 | `<SERVICE>_…` | secret | secrets propres au service, rendus dans le `.env` du serveur |
 
 `Thaskow/vps` pose tous ces noms : un secret n'est jamais saisi à la main sauf s'il vient d'un tiers (token Discord, identifiants Reddit…). Les valeurs ne sont jamais affichées, ni dans les logs ni dans les issues.
@@ -57,10 +58,12 @@ Ce qui est sensible va dans les **secrets**, le reste dans les **variables**. To
 - `permissions: contents: read` en tête de chaque workflow ; tout droit supplémentaire est déclaré sur le job qui en a besoin.
 - Un déploiement ne tourne jamais en parallèle d'un autre sur le même service : `concurrency: deploy-<repo>`, sans annulation.
 - Logique partagée dans ce repo :
-  - [`deploy-compose.yml`](../.github/workflows/deploy-compose.yml) : déploiement `git` + `docker compose` sur le VPS, health check, retour automatique à la version précédente, notification ntfy ;
+  - [`deploy-compose.yml`](../.github/workflows/deploy-compose.yml) : déploiement `git` + `docker compose` sur le VPS, health check, retour automatique à la version précédente, notification Pushover ;
   - [`validate.yml`](../.github/workflows/validate.yml) : pre-commit, `docker compose config`, images figées, checks propres au repo ;
   - [`dependabot-auto-merge.yml`](../.github/workflows/dependabot-auto-merge.yml) : fusion automatique des patchs (jamais les images Docker) ;
-  - actions composites [`ssh-setup`](../actions/ssh-setup/action.yml) et [`ntfy`](../actions/ntfy/action.yml) pour les workflows sur mesure.
+  - actions composites [`ssh-setup`](../actions/ssh-setup/action.yml) et [`notify`](../actions/notify/action.yml) pour les workflows sur mesure.
+
+Priorité des notifications : `-1` information (déploiement réussi, message du forum), `0` normal, `1` action nécessaire (échec, alerte). La priorité `2`, qui répète jusqu'à l'accusé de réception, est réservée aux vraies pannes.
 - Les repos appellent ces workflows par SHA (`Thaskow/.github/.github/workflows/deploy-compose.yml@<sha> # v1.0.0`) ; une version de ce repo n'est jamais modifiée après publication.
 
 ## Contrat de déploiement (`deploy-compose.yml`)

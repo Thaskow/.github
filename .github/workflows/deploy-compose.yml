@@ -270,6 +270,8 @@ jobs:
       - name: Summary and notification
         if: always()
         env:
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
           NTFY_URL: ${{ secrets.NTFY_URL }}
           STATUS: ${{ job.status }}
           ROLLED_BACK: ${{ steps.deploy.outputs.rolled_back == 'true' || steps.rollback.outcome == 'success' }}
@@ -284,13 +286,18 @@ jobs:
             if [ "$ROLLED_BACK" = true ]; then echo "- **Retour automatique à la version précédente**"; fi
             echo "- Rollback manuel : *Run workflow* avec \`ref\` = tag ou commit voulu"
           } >> "$GITHUB_STEP_SUMMARY"
-          test -n "$NTFY_URL" || exit 0
-          title() { printf '=?UTF-8?B?%s?=' "$(printf '%s' "$1" | base64 -w0)"; }
           if [ "$STATUS" = success ]; then
-            set -- "$REPO : $VERSION déployé" "rocket" "low" "Déploiement réussi."
+            set -- "$REPO : $VERSION déployé" "rocket" "low" "Déploiement réussi." "✅" "-1"
           elif [ "$ROLLED_BACK" = true ]; then
-            set -- "$REPO : déploiement annulé" "rewind,warning" "high" "Le déploiement de ${REF::12} a échoué, la version précédente a été remise."
+            set -- "$REPO : déploiement annulé" "rewind,warning" "high" "Le déploiement de ${REF::12} a échoué, la version précédente a été remise." "⚠️" "1"
           else
-            set -- "$REPO : échec du déploiement" "x" "high" "Le déploiement de ${REF::12} a échoué. Voir les logs."
+            set -- "$REPO : échec du déploiement" "x" "high" "Le déploiement de ${REF::12} a échoué. Voir les logs." "❌" "1"
           fi
-          curl -fsS -m 10 -H "Title: $(title "$1")" -H "Tags: $2" -H "Priority: $3" -H "Click: $RUN_URL" --data-binary "$4" "$NTFY_URL" >/dev/null || true
+          if [ -n "$PUSHOVER_TOKEN" ] && [ -n "$PUSHOVER_USER" ]; then
+            curl -fsS -m 10 -o /dev/null --form-string "token=$PUSHOVER_TOKEN" --form-string "user=$PUSHOVER_USER" \
+              --form-string "title=$5 $1" --form-string "priority=$6" --form-string "url=$RUN_URL" --form-string "message=$4" \
+              https://api.pushover.net/1/messages.json || true
+          elif [ -n "$NTFY_URL" ]; then
+            title() { printf '=?UTF-8?B?%s?=' "$(printf '%s' "$1" | base64 -w0)"; }
+            curl -fsS -m 10 -H "Title: $(title "$1")" -H "Tags: $2" -H "Priority: $3" -H "Click: $RUN_URL" --data-binary "$4" "$NTFY_URL" >/dev/null || true
+          fi

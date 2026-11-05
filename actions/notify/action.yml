@@ -1,0 +1,62 @@
+name: notify
+description: Notification Pushover, ou ntfy si Pushover n'est pas configuré ; ignorée sans destination
+
+inputs:
+  pushover-token:
+    description: Jeton de l'app Pushover (secret PUSHOVER_TOKEN)
+    required: false
+    default: ''
+  pushover-user:
+    description: Clé utilisateur Pushover (secret PUSHOVER_USER)
+    required: false
+    default: ''
+  ntfy-url:
+    description: URL du topic, utilisée seulement sans Pushover (secret NTFY_URL)
+    required: false
+    default: ''
+  title:
+    required: true
+  message:
+    required: true
+  emoji:
+    description: Préfixe du titre Pushover (✅, ⚠️, ❌…), le tableau de bord en déduit le niveau
+    required: false
+    default: ''
+  tags:
+    description: Tags ntfy
+    required: false
+    default: ''
+  priority:
+    description: -1 information, 0 normal, 1 action nécessaire
+    required: false
+    default: '0'
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PUSHOVER_TOKEN: ${{ inputs.pushover-token }}
+        PUSHOVER_USER: ${{ inputs.pushover-user }}
+        NTFY_URL: ${{ inputs.ntfy-url }}
+        TITLE: ${{ inputs.title }}
+        MESSAGE: ${{ inputs.message }}
+        EMOJI: ${{ inputs.emoji }}
+        TAGS: ${{ inputs.tags }}
+        PRIORITY: ${{ inputs.priority }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        if [ -n "$PUSHOVER_TOKEN" ] && [ -n "$PUSHOVER_USER" ]; then
+          curl -fsS -m 10 -o /dev/null --form-string "token=$PUSHOVER_TOKEN" --form-string "user=$PUSHOVER_USER" \
+            --form-string "title=${EMOJI:+$EMOJI }$TITLE" --form-string "priority=$PRIORITY" --form-string "url=$RUN_URL" --form-string "message=$MESSAGE" \
+            https://api.pushover.net/1/messages.json || true
+        elif [ -n "$NTFY_URL" ]; then
+          case "$PRIORITY" in
+            -1) level=low ;;
+            1) level=high ;;
+            *) level=default ;;
+          esac
+          # non-ASCII titles must be RFC 2047 encoded for ntfy
+          curl -fsS -m 10 -o /dev/null -H "Title: =?UTF-8?B?$(printf '%s' "$TITLE" | base64 -w0)?=" -H "Tags: $TAGS" -H "Priority: $level" -H "Click: $RUN_URL" \
+            --data-binary "$MESSAGE" "$NTFY_URL" || true
+        fi
