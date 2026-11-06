@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/Thaskow/.github/compare/v1.2.1...v1.3.0) (2026-11-06)
+
+
+### Features
+
+* **notify:** notifications Pushover avec repli sur ntfy ([#14](https://github.com/Thaskow/.github/issues/14)) ([6fd1251](https://github.com/Thaskow/.github/commit/6fd1251aeb9879ad0ff1d81985ed25d348e88352))
+
 ## [1.2.1](https://github.com/Thaskow/.github/compare/v1.2.0...v1.2.1) (2026-10-22)
 
 
